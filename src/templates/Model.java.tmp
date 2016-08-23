@@ -1,0 +1,123 @@
+@import util.Campo
+@args List<Campo> campos, String nomeClasse, String nomeArquivo,  String tabela
+
+import util.ArquivoOrigem;
+import util.Coluna;
+
+@@ArquivoOrigem(nome="@nomeArquivo")
+public class @nomeClasse {
+
+	public static final String tabela = "@tabela";
+	
+@for(Campo campo: campos) {
+	private @campo.getTipo() @campo.getNome();
+}
+
+@for(Campo campo: campos) {
+
+	@campo.get() {
+		return this.@campo.getNome();
+	}
+
+	@@Coluna(nomeArquivo="@campo.getNomeColunaArquivo()" , nomeBanco="@campo.getNomeColunaBanco()" )
+	@campo.set() {
+		this.@campo.getNome() = @campo.getNome();
+	}
+}
+
+	@@Override
+	public String toString() {
+		return ( ""
+		@for(Campo campo: campos) {				
+				+ "; @campo.getNome(): " + @campo.getNome() 
+		}
+				+ "").substring(1);
+	}
+	
+	public String toCSV() {
+		return ( ""
+		@for(Campo campo: campos) {				
+				+ ";" + @campo.getNome() 
+		}
+				+ "").substring(1);
+	}
+	
+	public String toInsert(){
+	
+	 String colunas = "";
+	 String valores = "";
+	 
+	 @for(Campo campo: campos) {				
+				valores += ", " + toString(@campo.getNome()); 
+				colunas += ", @campo.getNomeColunaBanco()";
+	 }
+		return (
+				"insert into " + tabela 
+				+ "("
+				+ colunas.substring(1)
+				+ ")"
+				+ " values ("
+				+ valores.substring(1)
+				+ ")"   
+						
+				);
+	}
+	
+	public String toUpdate(){
+
+	 	String where = "";
+	 	String valores = "";
+	 
+	 @for(Campo campo: campos) {				
+				valores += ", @campo.getNomeColunaBanco() = " +  toString(@campo.getNome()) ;
+			@if(campo.getNomeColunaArquivo().startsWith("#")){ 
+				where   += " and @campo.getNomeColunaBanco() = " + toString(@campo.getNome()) ;
+			}
+	 }
+		return (
+				"update " + tabela + "set "
+				+ valores.substring(1)
+				+ " where 1=1 "
+				+ where 
+				);
+	}
+	
+	private boolean isNumeric(String str) {
+		if(str == null) {
+			return false;
+		}
+		return str.trim().matches("[+-]?\\d+(\\.\\d+)?");
+	}
+
+	private String toString(Object o) {
+
+		if (o == null) {
+			return "NULL";
+		}
+		
+		String str;
+		if(!(o instanceof String)){
+			return o.toString();
+		}else {
+			str = o.toString();
+		}
+		
+		str = str.trim();
+		
+		if(str.isEmpty()){
+			return "NULL";
+		}
+		
+		Object o1 = null ;
+		
+		if (!str.startsWith("'") &&  !str.startsWith("nextval") &&  !str.startsWith("now()") ){
+				o1 = "'" + str + "'";
+		}else {
+				o1 = str;
+		}
+		
+		return o1.toString();
+	}
+
+
+}
