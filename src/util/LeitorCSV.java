@@ -78,11 +78,20 @@ public class LeitorCSV {
 		if(!classe.isAnnotationPresent(ArquivoOrigem.class)){
 			throw new IllegalArgumentException("Classe não possue anotação ArquivoOrigem");
 		}
-		
-		
+
 		ArquivoOrigem arquivoOrigem = classe.getAnnotation(ArquivoOrigem.class);
-		
 		String arquivo = arquivoOrigem.nome();
+		List<T> retorno = gerarObjetos(classe, arquivo);
+		return retorno;
+	}
+	
+	public static <T> List<T> carregarObjetos(Class<T> classe, String arquivo) throws IOException {
+		List<T> retorno = gerarObjetos(classe, arquivo);
+		return retorno;
+	}
+
+	private static <T> List<T> gerarObjetos(Class<T> classe, String arquivo)
+			throws IOException {
 		LeitorCSV leitor = LeitorCSV.carregarArquivo(arquivo);
 		
 		Map<String,Method> map = new HashMap<>();
@@ -111,14 +120,17 @@ public class LeitorCSV {
 				T obj = classe.newInstance();		
 				int i = 0;
 				for (String valor : linha) {
-					String col = cols[i];
+					String col =  cols[i];
+					if(valor != null  && valor.equals("")){
+						valor = null;
+					}
 					Method m = map.get(col);
 					Object objParam = null;
 					if(col.contains(":")){
 						String tipo = col.split(":")[1];
 						objParam = converterTipo(tipo, valor);
 					}else {
-						objParam =  valor;
+						objParam =  valor ;
 					}
 					m.invoke(obj, objParam);
 					i++;
@@ -129,21 +141,27 @@ public class LeitorCSV {
 				e.printStackTrace();
 			}
 		}
-		
 		return retorno;
 	}
 
 	private static Object converterTipo(String tipo, String valor) {
 
+		if(!tipo.equals("String") && valor  == null){
+			return null;
+		}
+		
 		if(tipo.equals("Integer")){
 			return Integer.parseInt(valor);
 		}
+		
 		if(tipo.equals("Long")){
 			return Long.parseLong(valor);
 		}
+		
 		if(tipo.equals("Double")){
 			return Double.parseDouble(valor);
 		}
+		
 		if (tipo.equals("Date")) {
 			try {
 				return formatter.parse(valor);			
